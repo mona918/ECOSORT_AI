@@ -1,10 +1,9 @@
-
-
+import os
+from pathlib import Path
 import streamlit as st
 import torch
-from PIL import Image
 from torchvision import transforms
-from pathlib import Path
+from PIL import Image
 
 from transfer_model import EcoSortResNet
 
@@ -13,11 +12,7 @@ from transfer_model import EcoSortResNet
 # PAGE SETUP
 # ==========================================
 
-st.set_page_config(
-    page_title="EcoSort AI",
-    page_icon="♻️",
-    layout="centered"
-)
+st.set_page_config(page_title="EcoSort AI", page_icon="♻️", layout="centered")
 
 st.title("♻️ EcoSort AI")
 st.write("AI-powered waste classification")
@@ -27,28 +22,21 @@ st.write("AI-powered waste classification")
 # CLASSES
 # ==========================================
 
-classes = [
-    "dry",
-    "e_waste",
-    "recyclable",
-    "wet"
-]
+classes = ["dry", "e_waste", "recyclable", "wet"]
 
 
 # ==========================================
 # DEVICE
 # ==========================================
 
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # ==========================================
 # LOAD MODEL
 # ==========================================
-import os
 import urllib.request
+
 
 @st.cache_resource
 def load_model():
@@ -59,7 +47,7 @@ def load_model():
   model_path = base_dir / "transfer_resnet18_best.pth"
   MODEL_URL = "https://github.com/mona918/ECOSORT_AI/releases/download/v1.0/transfer_resnet18_best.pth"
 
-  # ---> THIS PART WAS MISSING: Download the file if it doesn't exist <---
+  # Download the file if it doesn't exist
   if not model_path.exists():
     with st.spinner("Downloading model weights... Please wait."):
       urllib.request.urlretrieve(MODEL_URL, str(model_path))
@@ -68,18 +56,16 @@ def load_model():
   model = EcoSortResNet()
 
   # Load trained weights
-  model.load_state_dict(
-      torch.load(
-          model_path,
-          map_location=device,
-      )
-  )
+  model.load_state_dict(torch.load(model_path, map_location=device))
 
   model = model.to(device)
   model.eval()
   return model
 
-  
+
+# ---> FIX: Initialize the model here so it's globally available <---
+model = load_model()
+
 
 # ==========================================
 # IMAGE TRANSFORMATION
@@ -89,9 +75,8 @@ transform = transforms.Compose([
     transforms.Resize((160, 160)),
     transforms.ToTensor(),
     transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    ),
 ])
 
 # ==========================================
@@ -101,13 +86,7 @@ transform = transforms.Compose([
 st.subheader("Upload a waste image")
 
 uploaded_file = st.file_uploader(
-    "Choose an image",
-    type=[
-        "jpg",
-        "jpeg",
-        "png",
-        "webp"
-    ]
+    "Choose an image", type=["jpg", "jpeg", "png", "webp"]
 )
 
 
@@ -117,9 +96,7 @@ uploaded_file = st.file_uploader(
 
 st.subheader("Or take a photo")
 
-camera_file = st.camera_input(
-    "Take a picture"
-)
+camera_file = st.camera_input("Take a picture")
 
 
 # Use uploaded image OR camera image
@@ -132,102 +109,64 @@ file = uploaded_file if uploaded_file else camera_file
 
 if file is not None:
 
-    # Open image
-    image = Image.open(file).convert("RGB")
+  # Open image
+  image = Image.open(file).convert("RGB")
 
-    # Display image
-    st.image(
-        image,
-        caption="Input Image",
-        use_container_width=True
-    )
+  # Display image
+  st.image(image, caption="Input Image", use_container_width=True)
 
-    # Transform image
-    image_tensor = transform(image)
+  # Transform image
+  image_tensor = transform(image)
 
-    # Add batch dimension
-    image_tensor = image_tensor.unsqueeze(0)
+  # Add batch dimension
+  image_tensor = image_tensor.unsqueeze(0)
 
-    # Move to CPU/GPU
-    image_tensor = image_tensor.to(device)
+  # Move to CPU/GPU
+  image_tensor = image_tensor.to(device)
 
-    # Pass image through model to get prediction
-    image_tensor = image_tensor.to(device)
+  # ======================================
+  # MODEL PREDICTION
+  # ======================================
 
-
+  with torch.no_grad():
     output = model(image_tensor)
-    _, predicted_class = torch.max(output, 1)
 
-    # Display your result
-    st.write(f"Prediction: {predicted_class.item()}")
+    probabilities = torch.softmax(output, dim=1)[0]
 
-    # ======================================
-    # MODEL PREDICTION
-    # ======================================
+  # ======================================
+  # TOP PREDICTION
+  # ======================================
 
-    with torch.no_grad():
+  predicted_index = probabilities.argmax().item()
 
-        output = model(image_tensor)
+  predicted_class = classes[predicted_index]
 
-        probabilities = torch.softmax(
-            output,
-            dim=1
-        )[0]
+  confidence = probabilities[predicted_index].item()
 
+  # ======================================
+  # DISPLAY RESULT
+  # ======================================
 
-    # ======================================
-    # TOP PREDICTION
-    # ======================================
+  st.subheader("Prediction")
 
-    predicted_index = probabilities.argmax().item()
+  st.success(f"{predicted_class.upper()} ({confidence * 100:.2f}% confidence)")
 
-    predicted_class = classes[predicted_index]
+  # ======================================
+  # TOP 3 PREDICTIONS
+  # ======================================
 
-    confidence = probabilities[
-        predicted_index
-    ].item()
+  st.subheader("Top 3 Predictions")
 
+  top_values, top_indices = torch.topk(probabilities, k=3)
 
-    # ======================================
-    # DISPLAY RESULT
-    # ======================================
+  for value, index in zip(top_values, top_indices):
+    class_name = classes[index.item()]
 
-    st.subheader("Prediction")
+    confidence_value = value.item()
 
-    st.success(
-        f"{predicted_class.upper()} "
-        f"({confidence * 100:.2f}% confidence)"
-    )
+    st.write(f"**{class_name}** — {confidence_value * 100:.2f}%")
 
-
-    # ======================================
-    # TOP 3 PREDICTIONS
-    # ======================================
-
-    st.subheader("Top 3 Predictions")
-
-    top_values, top_indices = torch.topk(
-        probabilities,
-        k=3
-    )
-
-    for value, index in zip(
-        top_values,
-        top_indices
-    ):
-
-        class_name = classes[index.item()]
-
-        confidence_value = value.item()
-
-        st.write(
-            f"**{class_name}** — "
-            f"{confidence_value * 100:.2f}%"
-        )
-
-        st.progress(
-            confidence_value
-        )
+    st.progress(confidence_value)
 
 
 # ==========================================
@@ -236,7 +175,4 @@ if file is not None:
 
 st.divider()
 
-st.caption(
-    "EcoSort AI — Waste Classification using "
-    "Transfer Learning with ResNet18"
-)
+st.caption("EcoSort AI — Waste Classification using Transfer Learning with ResNet18")

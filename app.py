@@ -1,5 +1,3 @@
-import os
-import urllib.request
 
 
 import streamlit as st
@@ -49,6 +47,8 @@ device = torch.device(
 # ==========================================
 # LOAD MODEL
 # ==========================================
+import os
+import urllib.request
 
 @st.cache_resource
 def load_model():

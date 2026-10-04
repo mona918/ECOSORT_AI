@@ -8,17 +8,7 @@ from pathlib import Path
 
 from transfer_model import EcoSortResNet
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-base_dir = Path(__file__).resolve().parent
-model_path = base_dir / "transfer_resnet18_best.pth"
-
-model = EcoSortResNet()
-model.load_state_dict(torch.load(model_path, map_location=device))
-model = model.to(device)
-model.eval()
-
-classes = ["dry", "e_waste", "recyclable", "wet"]
 # ==========================================
 # PAGE SETUP
 # ==========================================
@@ -164,7 +154,7 @@ if file is not None:
     # Pass image through model to get prediction
     image_tensor = image_tensor.to(device)
 
-     with torch.no_grad():
+
     output = model(image_tensor)
     _, predicted_class = torch.max(output, 1)
 

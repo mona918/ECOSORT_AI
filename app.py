@@ -54,7 +54,7 @@ def load_model():
 
     # Model file is in the same folder as app.py
     model_path = base_dir / "transfer_resnet18_best.pth"
-    MODEL_URL="sha256:38a765184b82718a2fa00a589233ce9463aac0fd4b642d4f8f0816dac2bb2e88 "
+    MODEL_URL = "https://github.com/mona918/ECOSORT_AI/releases/download/v1.0/transfer_resnet18_best.pth" "
     # Create model
     model = EcoSortResNet()
 

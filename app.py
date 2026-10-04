@@ -1,3 +1,7 @@
+import os
+import urllib.request
+
+
 import streamlit as st
 import torch
 from PIL import Image

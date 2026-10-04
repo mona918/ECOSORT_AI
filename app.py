@@ -53,8 +53,8 @@ def load_model():
     base_dir = Path(__file__).resolve().parent
 
     # Model file is in the same folder as app.py
-    model_path = base_dir / "transfer_resnet18.pth"
-
+    model_path = base_dir / "transfer_resnet18_best.pth"
+    MODEL_URL="sha256:38a765184b82718a2fa00a589233ce9463aac0fd4b642d4f8f0816dac2bb2e88 "
     # Create model
     model = EcoSortResNet()
 

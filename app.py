@@ -52,32 +52,34 @@ import urllib.request
 
 @st.cache_resource
 def load_model():
+  # Find the folder containing app.py
+  base_dir = Path(__file__).resolve().parent
 
-    # Find the folder containing app.py
-    base_dir = Path(__file__).resolve().parent
+  # Model file path
+  model_path = base_dir / "transfer_resnet18_best.pth"
+  MODEL_URL = "https://github.com/mona918/ECOSORT_AI/releases/download/v1.0/transfer_resnet18_best.pth"
 
-    # Model file is in the same folder as app.py
-    model_path = base_dir / "transfer_resnet18_best.pth"
-    MODEL_URL = "https://github.com/mona918/ECOSORT_AI/releases/download/v1.0/transfer_resnet18_best.pth" 
-    # Create model
-    model = EcoSortResNet()
+  # ---> THIS PART WAS MISSING: Download the file if it doesn't exist <---
+  if not model_path.exists():
+    with st.spinner("Downloading model weights... Please wait."):
+      urllib.request.urlretrieve(MODEL_URL, str(model_path))
 
-    # Load trained weights
-    model.load_state_dict(
-        torch.load(
-            model_path,
-            map_location=device
-        )
-    )
+  # Create model
+  model = EcoSortResNet()
 
-    model = model.to(device)
-    model.eval()
+  # Load trained weights
+  model.load_state_dict(
+      torch.load(
+          model_path,
+          map_location=device,
+      )
+  )
 
-    return model
+  model = model.to(device)
+  model.eval()
+  return model
 
-
-model = load_model()
-
+  
 
 # ==========================================
 # IMAGE TRANSFORMATION
